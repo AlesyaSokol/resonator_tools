@@ -23,24 +23,26 @@ class plotting(object):
         imag = self.z_data_raw.imag
         real2 = self.z_data_sim.real
         imag2 = self.z_data_sim.imag
-        plt.subplot(221)
+        plt.subplot(131)
         plt.plot(real,imag,label='rawdata')
         plt.plot(real2,imag2,label='fit')
         plt.xlabel('Re(S21)')
         plt.ylabel('Im(S21)')
         plt.legend()
-        plt.subplot(222)
+        plt.subplot(132)
         plt.plot(self.f_data*1e-9,np.absolute(self.z_data_raw),label='rawdata')
         plt.plot(self.f_data*1e-9,np.absolute(self.z_data_sim),label='fit')
         plt.xlabel('f (GHz)')
-        plt.ylabel('|S21|')
+        plt.ylabel('Amplitude')
         plt.legend()
-        plt.subplot(223)
-        plt.plot(self.f_data*1e-9,np.angle(self.z_data_raw),label='rawdata')
-        plt.plot(self.f_data*1e-9,np.angle(self.z_data_sim),label='fit')
+        plt.subplot(133)
+        plt.plot(self.f_data*1e-9,np.unwrap(np.angle(self.z_data_raw)),label='rawdata')
+        plt.plot(self.f_data*1e-9,np.unwrap(np.angle(self.z_data_sim)),label='fit')
         plt.xlabel('f (GHz)')
-        plt.ylabel('arg(|S21|)')
+        plt.ylabel('Phase')
         plt.legend()
+        plt.gcf().set_size_inches(15,5)
+        plt.tight_layout()
         plt.show()
         
     def plotcalibrateddata(self):

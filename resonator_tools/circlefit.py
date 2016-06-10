@@ -148,10 +148,10 @@ class circlefit(object):
         # the term *sqrt term corrects for the constraint, because it may be altered due to numerical inaccuracies during calculation
         r0 = 1./(2.*np.absolute(A_vec[0]))*np.sqrt(A_vec[1]*A_vec[1]+A_vec[2]*A_vec[2]-4.*A_vec[0]*A_vec[3])
         if refine_results:
-            print "agebraic r0: " + str(r0)
+            print("agebraic r0: " + str(r0))
             xc,yc,r0 = self._fit_circle_iter(z_data, xc, yc, r0)
             r0 = self._fit_circle_iter_radialweight(z_data, xc, yc, r0)
-            print "iterative r0: " + str(r0)
+            print("iterative r0: " + str(r0))
         return xc, yc, r0
 
     def _guess_delay(self,f_data,z_data):

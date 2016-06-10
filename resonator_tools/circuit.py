@@ -3,9 +3,9 @@ import numpy as np
 import scipy.optimize as spopt
 from scipy.constants import hbar
 
-from utilities import plotting, save_load, Watt2dBm, dBm2Watt
-from circlefit import circlefit
-from calibration import calibration
+from .utilities import plotting, save_load, Watt2dBm, dBm2Watt
+from .circlefit import circlefit
+from .calibration import calibration
 
 ##
 ## z_data_raw denotes the raw data
@@ -121,7 +121,7 @@ class reflection_port(circlefit, save_load, plotting, calibration):
                 errors = {"Ql_err":Ql_err, "Qc_err":Qc_err, "fr_err":fr_err,"chi_square":chi_square,"Qi_err":Qi_err}
                 results.update( errors )
             else:
-                print "WARNING: Error calculation failed!"
+                print("WARNING: Error calculation failed!")
         else:
             #just calc chisquared:
             fun2 = lambda x: self._residuals_notch_ideal(x,f_data,z_data)**2
@@ -292,7 +292,7 @@ class notch_port(circlefit, save_load, plotting, calibration):
             #chi_square, cov = rt.get_cov(rt.residuals_notch_ideal,f_data,z_data,p)
     
             if cov!=None:
-                errors = np.sqrt(np.diagonal(cov))
+                errors = np.sqrt(np.diagonal(cov))  
                 fr_err,absQc_err,Ql_err,phi0_err = errors
                 #calc Qi with error prop (sum the squares of the variances and covariaces)
                 dQl = 1./((1./Ql-1./absQc)**2*Ql**2)
@@ -309,7 +309,7 @@ class notch_port(circlefit, save_load, plotting, calibration):
                 errors = {"phi0_err":phi0_err, "Ql_err":Ql_err, "absQc_err":absQc_err, "fr_err":fr_err,"chi_square":chi_square,"Qi_no_corr_err":Qi_no_corr_err,"Qi_dia_corr_err": Qi_dia_corr_err}
                 results.update( errors )
             else:
-                print "WARNING: Error calculation failed!"
+                print("WARNING: Error calculation failed!")
         else:
             #just calc chisquared:
             fun2 = lambda x: self._residuals_notch_ideal(x,f_data,z_data)**2
@@ -413,7 +413,7 @@ class resonator(object):
         self.port = {}
         self.transm = {}
         if len(ports) > 0:
-            for key, pname in ports.iteritems():
+            for key, pname in ports.items():
                 if pname=='direct':
                     self.port.update({key:reflection_port()})
                 elif pname=='notch':
