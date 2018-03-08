@@ -90,11 +90,27 @@ class circlefit(object):
             A1, A2, A3, A4, fr, Ql = p
             err = y -(A1+A2*(x-fr)+(A3+A4*(x-fr))/(1.+4.*Ql**2*((x-fr)/fr)**2))
             return err
+        def fitfunc(x,A1, A2, A3, A4, fr, Ql):
+            return A1+A2*(x-fr)+(A3+A4*(x-fr))/(1.+4.*Ql**2*((x-fr)/fr)**2)
+            
         p0 = [A1a, A2a , A3a, A4a, fra, Qla]
-        p_final = spopt.leastsq(residuals2,p0,args=(np.array(f_data),np.array(amplitude_sqr)))
+        #p_final = spopt.leastsq(residuals2,p0,args=(np.array(f_data),np.array(amplitude_sqr)))
+        try:
+            popt, pcov = spopt.curve_fit(fitfunc, np.array(f_data), np.array(amplitude_sqr),p0=p0)
         #A1, A2, A3, A4, fr, Ql = p_final[0]
         #print p_final[0][5]
-        return p_final[0]
+            if pcov is not None:
+                self.df_error = np.sqrt(pcov[4][4])
+                self.dQl_error = np.sqrt(pcov[5][5])
+            else:
+                self.df_error = np.inf
+                self.dQl_error = np.inf
+        except:
+            popt = p0
+            self.df_error = np.inf
+            self.dQl_error = np.inf
+        #return p_final[0]
+        return popt
     
     def _fit_circle(self,z_data, refine_results=False):
         def calc_moments(z_data):
@@ -276,7 +292,7 @@ class circlefit(object):
         wrapper for get_cov, only gives the errors and chisquare
         '''
         chisqr, cov = self._get_cov(residual,xdata,ydata,fitparams)
-        if cov!=None:
+        if cov is not None:
             errors = np.sqrt(np.diagonal(cov))
         else:
             errors = None

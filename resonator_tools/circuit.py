@@ -2,6 +2,7 @@ import warnings
 import numpy as np
 import scipy.optimize as spopt
 from scipy.constants import hbar
+from scipy.interpolate import splrep, splev
 
 from .utilities import plotting, save_load, Watt2dBm, dBm2Watt
 from .circlefit import circlefit
@@ -20,14 +21,15 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         self.porttype = 'direct'
         self.fitresults = {}
         self.z_data = None
-        if f_data!=None:
+        if f_data is not None:
             self.f_data = np.array(f_data)
         else:
             self.f_data=None
-        if z_data_raw!=None:
+        if z_data_raw is not None:
             self.z_data_raw = np.array(z_data_raw)
         else:
             self.z_data=None
+        self.phasefitsmooth = 3
     
     def _S11(self,f,fr,k_c,k_i):
         '''
@@ -49,11 +51,26 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         maxval = np.max(np.absolute(z_data))
         z_data = z_data/maxval
         A1, A2, A3, A4, fr, Ql = self._fit_skewed_lorentzian(f_data,z_data)
+        if self.df_error/fr > 0.0001 or self.dQl_error/Ql>0.1:
+            #print "WARNING: Calibration using Lorentz fit failed, trying phase fit..."
+            A1 = np.mean(np.absolute(z_data))
+            A2 = 0.
+            A3 = 0.
+            A4 = 0.
+            #fr = np.mean(f_data)
+            f = splrep(f_data,np.unwrap(np.angle(z_data)),k=5,s=self.phasefitsmooth)
+            fr = f_data[np.argmax(np.absolute(splev(f_data,f,der=1)))]
+            Ql = 1e4
         if ignoreslope==True:
-            A2 = 0
+            A2 = 0.
         else:
-            z_data = (np.absolute(z_data)-A2*(f_data-fr)) * np.exp(np.angle(z_data)*1j)  #usually not necessary
-        if delay==None:
+            A2 = 0.
+            print "WARNING: The ignoreslope option is ignored! Corrections to the baseline should be done manually prior to fitting."
+            print "see also: resonator_tools.calibration.fit_baseline_amp() etc. for help on fitting the baseline."
+            print "There is also an example ipython notebook for using this function."
+            print "However, make sure to understand the impact of the baseline (parasitic coupled resonances etc.) on your system."
+            #z_data = (np.absolute(z_data)-A2*(f_data-fr)) * np.exp(np.angle(z_data)*1j)  #usually not necessary
+        if delay is None:
             if guess==True:
                 delay = self._guess_delay(f_data,z_data)
             else:
@@ -62,11 +79,11 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         params = [A1, A2, A3, A4, fr, Ql]
         return delay, params 
     
-    def do_calibration(self,f_data,z_data,ignoreslope=True,guessdelay=True):
+    def do_calibration(self,f_data,z_data,ignoreslope=True,guessdelay=True,fixed_delay=None):
         '''
         calculating parameters for normalization
         '''
-        delay, params = self.get_delay(f_data,z_data,ignoreslope=ignoreslope,guess=guessdelay)
+        delay, params = self.get_delay(f_data,z_data,ignoreslope=ignoreslope,guess=guessdelay,delay=fixed_delay)
         z_data = (z_data-params[1]*(f_data-params[4]))*np.exp(2.*1j*np.pi*delay*f_data)
         xc, yc, r0 = self._fit_circle(z_data)
         zc = np.complex(xc,yc)
@@ -91,8 +108,8 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         S11 version of the circlefit
         '''
     
-        if fr==None: fr=f_data[np.argmin(np.absolute(z_data))]
-        if Ql==None: Ql=1e6
+        if fr is None: fr=f_data[np.argmin(np.absolute(z_data))]
+        if Ql is None: Ql=1e6
         xc, yc, r0 = self._fit_circle(z_data,refine_results=refine_results)
         phi0 = -np.arcsin(yc/r0)
         theta0 = self._periodic_boundary(phi0+np.pi,np.pi)
@@ -111,7 +128,7 @@ class reflection_port(circlefit, save_load, plotting, calibration):
             chi_square, cov = self._get_cov_fast_directrefl(f_data,z_data,p)
             #chi_square, cov = rt.get_cov(rt.residuals_notch_ideal,f_data,z_data,p)
     
-            if cov!=None:
+            if cov is not None:
                 errors = np.sqrt(np.diagonal(cov))
                 fr_err,Qc_err,Ql_err = errors
                 #calc Qi with error prop (sum the squares of the variances and covariaces)
@@ -132,12 +149,12 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         return results
         
     
-    def autofit(self):
+    def autofit(self,electric_delay=None):
         '''
         automatic calibration and fitting
         '''
         delay, amp_norm, alpha, fr, Ql, A2, frcal =\
-                self.do_calibration(self.f_data,self.z_data_raw,ignoreslope=True,guessdelay=False)
+                self.do_calibration(self.f_data,self.z_data_raw,ignoreslope=True,guessdelay=False,fixed_delay=electric_delay)
         self.z_data = self.do_normalization(self.f_data,self.z_data_raw,delay,amp_norm,alpha,A2,frcal)
         self.fitresults = self.circlefit(self.f_data,self.z_data,fr,Ql,refine_results=False,calc_errors=True)
         self.z_data_sim = A2*(self.f_data-frcal)+self._S11_directrefl(self.f_data,fr=self.fitresults["fr"],Ql=self.fitresults["Ql"],Qc=self.fitresults["Qc"],a=amp_norm,alpha=alpha,delay=delay)
@@ -192,11 +209,11 @@ class notch_port(circlefit, save_load, plotting, calibration):
         self.porttype = 'notch'
         self.fitresults = {}
         self.z_data = None
-        if f_data!=None:
+        if f_data is not None:
             self.f_data = np.array(f_data)
         else:
             self.f_data=None
-        if z_data_raw!=None:
+        if z_data_raw is not None:
             self.z_data_raw = np.array(z_data_raw)
         else:
             self.z_data_raw=None
@@ -211,10 +228,15 @@ class notch_port(circlefit, save_load, plotting, calibration):
         z_data = z_data/maxval
         A1, A2, A3, A4, fr, Ql = self._fit_skewed_lorentzian(f_data,z_data)
         if ignoreslope==True:
-            A2 = 0
+            A2 = 0.
         else:
-            z_data = (np.absolute(z_data)-A2*(f_data-fr)) * np.exp(np.angle(z_data)*1j)  #usually not necessary
-        if delay==None:
+            A2 = 0.
+            print "WARNING: The ignoreslope option is ignored! Corrections to the baseline should be done manually prior to fitting."
+            print "see also: resonator_tools.calibration.fit_baseline_amp() etc. for help on fitting the baseline."
+            print "There is also an example ipython notebook for using this function."
+            print "However, make sure to understand the impact of the baseline (parasitic coupled resonances etc.) on your system."
+            #z_data = (np.absolute(z_data)-A2*(f_data-fr)) * np.exp(np.angle(z_data)*1j)  #usually not necessary
+        if delay is None:
             if guess==True:
                 delay = self._guess_delay(f_data,z_data)
             else:
@@ -268,8 +290,8 @@ class notch_port(circlefit, save_load, plotting, calibration):
         also, check out [5] S. Probst et al. "Efficient and reliable analysis of noisy complex scatterung resonator data for superconducting quantum circuits" (in preparation)
         '''
     
-        if fr==None: fr=f_data[np.argmin(np.absolute(z_data))]
-        if Ql==None: Ql=1e6
+        if fr is None: fr=f_data[np.argmin(np.absolute(z_data))]
+        if Ql is None: Ql=1e6
         xc, yc, r0 = self._fit_circle(z_data,refine_results=refine_results)
         phi0 = -np.arcsin(yc/r0)
         theta0 = self._periodic_boundary(phi0+np.pi,np.pi)
@@ -291,8 +313,13 @@ class notch_port(circlefit, save_load, plotting, calibration):
             chi_square, cov = self._get_cov_fast_notch(f_data,z_data,p)
             #chi_square, cov = rt.get_cov(rt.residuals_notch_ideal,f_data,z_data,p)
     
+<<<<<<< HEAD
             if cov!=None:
                 errors = np.sqrt(np.diagonal(cov))  
+=======
+            if cov is not None:
+                errors = np.sqrt(np.diagonal(cov))
+>>>>>>> a64d756d92f8d00b9e63ea2dc13142e4dfad6fcd
                 fr_err,absQc_err,Ql_err,phi0_err = errors
                 #calc Qi with error prop (sum the squares of the variances and covariaces)
                 dQl = 1./((1./Ql-1./absQc)**2*Ql**2)
@@ -335,7 +362,7 @@ class notch_port(circlefit, save_load, plotting, calibration):
         '''
         return a*np.exp(np.complex(0,alpha))*np.exp(-2j*np.pi*f*delay)*(1.-Ql/Qc*np.exp(1j*phi)/(1.+2j*Ql*(f-fr)/fr))    
     
-    def get_single_photon_limit(self,unit='dBm'):
+    def get_single_photon_limit(self,unit='dBm',diacorr=True):
         '''
         returns the amout of power in units of W necessary
         to maintain one photon on average in the cavity
@@ -343,8 +370,12 @@ class notch_port(circlefit, save_load, plotting, calibration):
         '''
         if self.fitresults!={}:
             fr = self.fitresults['fr']
-            k_c = 2*np.pi*fr/self.fitresults['absQc']
-            k_i = 2*np.pi*fr/self.fitresults['Qi_dia_corr']
+            if diacorr:
+                k_c = 2*np.pi*fr/self.fitresults['Qc_dia_corr']
+                k_i = 2*np.pi*fr/self.fitresults['Qi_dia_corr']
+            else:
+                k_c = 2*np.pi*fr/self.fitresults['absQc']
+                k_i = 2*np.pi*fr/self.fitresults['Qi_no_corr']
             if unit=='dBm':
                 return Watt2dBm(1./(4.*k_c/(2.*np.pi*hbar*fr*(k_c+k_i)**2)))
             elif unit=='watt':
@@ -353,7 +384,7 @@ class notch_port(circlefit, save_load, plotting, calibration):
             warnings.warn('Please perform the fit first',UserWarning)
             return None
         
-    def get_photons_in_resonator(self,power,unit='dBm'):
+    def get_photons_in_resonator(self,power,unit='dBm',diacorr=True):
         '''
         returns the average number of photons
         for a given power in units of W
@@ -363,8 +394,12 @@ class notch_port(circlefit, save_load, plotting, calibration):
             if unit=='dBm':
                 power = dBm2Watt(power)
             fr = self.fitresults['fr']
-            k_c = 2*np.pi*fr/self.fitresults['Qc']
-            k_i = 2*np.pi*fr/self.fitresults['Qi']
+            if diacorr:
+                k_c = 2*np.pi*fr/self.fitresults['Qc_dia_corr']
+                k_i = 2*np.pi*fr/self.fitresults['Qi_dia_corr']
+            else:
+                k_c = 2*np.pi*fr/self.fitresults['absQc']
+                k_i = 2*np.pi*fr/self.fitresults['Qi_no_corr']
             return 4.*k_c/(2.*np.pi*hbar*fr*(k_c+k_i)**2) * power
         else:
             warnings.warn('Please perform the fit first',UserWarning)
@@ -378,11 +413,11 @@ class transmission_port(circlefit,save_load,plotting):
     def __init__(self,f_data=None,z_data_raw=None):
         self.porttype = 'transm'
         self.fitresults = {}
-        if f_data!=None:
+        if f_data is not None:
             self.f_data = np.array(f_data)
         else:
             self.f_data=None
-        if z_data_raw!=None:
+        if z_data_raw is not None:
             self.z_data_raw = np.array(z_data_raw)
         else:
             self.z_data=None
