@@ -7,12 +7,12 @@ def Watt2dBm(x):
     converts from units of watts to dBm
     '''
     return 10.*np.log10(x*1000.)
-    
+
 def dBm2Watt(x):
     '''
     converts from units of watts to dBm
     '''
-    return 10**(x/10.) /1000.   
+    return 10**(x/10.) /1000.
 
 class plotting(object):
     '''
@@ -23,6 +23,8 @@ class plotting(object):
         imag = self.z_data_raw.imag
         real2 = self.z_data_sim.real
         imag2 = self.z_data_sim.imag
+        fig = plt.figure(figsize=(15,5))
+        fig.canvas.set_window_title("Resonator fit")
         plt.subplot(131)
         plt.plot(real,imag,label='rawdata')
         plt.plot(real2,imag2,label='fit')
@@ -41,10 +43,11 @@ class plotting(object):
         plt.xlabel('f (GHz)')
         plt.ylabel('Phase')
         plt.legend()
-        plt.gcf().set_size_inches(15,5)
+        # plt.gcf().set_size_inches(15,5)
         plt.tight_layout()
         plt.show()
-        
+
+
     def plotcalibrateddata(self):
         real = self.z_data.real
         imag = self.z_data.imag
@@ -64,7 +67,7 @@ class plotting(object):
         plt.ylabel('arg(|S21|)')
         plt.legend()
         plt.show()
-        
+
     def plotrawdata(self):
         real = self.z_data_raw.real
         imag = self.z_data_raw.imag
@@ -102,13 +105,13 @@ class save_load(object):
         elif dtype=='linmagphasedeg':
             return x*np.exp(1j*y/180.*np.pi)
         elif dtype=='dBmagphasedeg':
-            return 10**(x/20.)*np.exp(1j*y/180.*np.pi)   
+            return 10**(x/20.)*np.exp(1j*y/180.*np.pi)
         else: warnings.warn("Undefined input type! Use 'realimag', 'dBmagphaserad', 'linmagphaserad', 'dBmagphasedeg' or 'linmagphasedeg'.", SyntaxWarning)
-    
+
     def add_data(self,f_data,z_data):
         self.f_data = np.array(f_data)
         self.z_data_raw = np.array(z_data)
-        
+
     def cut_data(self,f1,f2):
         def findpos(f_data,val):
             pos = 0
@@ -119,7 +122,7 @@ class save_load(object):
         pos2 = findpos(self.f_data,f2)
         self.f_data = self.f_data[pos1:pos2]
         self.z_data_raw = self.z_data_raw[pos1:pos2]
-        
+
     def add_fromtxt(self,fname,dtype,header_rows,usecols=(0,1,2),fdata_unit=1.,delimiter=None):
         '''
         dtype = 'realimag', 'dBmagphaserad', 'linmagphaserad', 'dBmagphasedeg', 'linmagphasedeg'
@@ -127,17 +130,17 @@ class save_load(object):
         data = np.loadtxt(fname,usecols=usecols,skiprows=header_rows,delimiter=delimiter)
         self.f_data = data[:,0]*fdata_unit
         self.z_data_raw = self._ConvToCompl(data[:,1],data[:,2],dtype=dtype)
-        
+
     def add_fromhdf():
         pass
-    
+
     def add_froms2p(self,fname,y1_col,y2_col,dtype,fdata_unit=1.,delimiter=None):
         '''
         dtype = 'realimag', 'dBmagphaserad', 'linmagphaserad', 'dBmagphasedeg', 'linmagphasedeg'
         '''
         if dtype == 'dBmagphasedeg' or dtype == 'linmagphasedeg':
             phase_conversion = 1./180.*np.pi
-        else: 
+        else:
             phase_conversion = 1.
         f = open(fname)
         lines = f.readlines()
@@ -167,6 +170,6 @@ class save_load(object):
             warnings.warn("Undefined input type! Use 'realimag', 'dBmagphaserad', 'linmagphaserad', 'dBmagphasedeg' or 'linmagphasedeg'.", SyntaxWarning)
         self.f_data = np.array(f_data)
         self.z_data_raw = np.array(z_data_raw)
-        
+
     def save_fitresults(self,fname):
         pass

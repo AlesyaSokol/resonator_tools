@@ -11,8 +11,8 @@ from .calibration import calibration
 ##
 ## z_data_raw denotes the raw data
 ## z_data denotes the normalized data
-##        
-    
+##
+
 class reflection_port(circlefit, save_load, plotting, calibration):
     '''
     normal direct port probed in reflection
@@ -30,7 +30,7 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         else:
             self.z_data=None
         self.phasefitsmooth = 3
-    
+
     def _S11(self,f,fr,k_c,k_i):
         '''
         use either frequency or angular frequency units
@@ -40,7 +40,7 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         k_i: internal loss rate
         '''
         return ((k_c-k_i)+2j*(f-fr))/((k_c+k_i)-2j*(f-fr))
-    
+
     def get_delay(self,f_data,z_data,delay=None,ignoreslope=True,guess=True):
         '''
         ignoreslope option not used here
@@ -65,10 +65,6 @@ class reflection_port(circlefit, save_load, plotting, calibration):
             A2 = 0.
         else:
             A2 = 0.
-            print "WARNING: The ignoreslope option is ignored! Corrections to the baseline should be done manually prior to fitting."
-            print "see also: resonator_tools.calibration.fit_baseline_amp() etc. for help on fitting the baseline."
-            print "There is also an example ipython notebook for using this function."
-            print "However, make sure to understand the impact of the baseline (parasitic coupled resonances etc.) on your system."
             #z_data = (np.absolute(z_data)-A2*(f_data-fr)) * np.exp(np.angle(z_data)*1j)  #usually not necessary
         if delay is None:
             if guess==True:
@@ -77,8 +73,8 @@ class reflection_port(circlefit, save_load, plotting, calibration):
                 delay=0.
             delay = self._fit_delay(f_data,z_data,delay,maxiter=200)
         params = [A1, A2, A3, A4, fr, Ql]
-        return delay, params 
-    
+        return delay, params
+
     def do_calibration(self,f_data,z_data,ignoreslope=True,guessdelay=True,fixed_delay=None):
         '''
         calculating parameters for normalization
@@ -96,18 +92,18 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         #alpha = np.angle(zc)
         a = r0 + np.absolute(zc)
         return delay, a, alpha, fr, Ql, params[1], params[4]
-    
+
     def do_normalization(self,f_data,z_data,delay,amp_norm,alpha,A2,frcal):
         '''
         transforming resonator into canonical position
         '''
         return (z_data-A2*(f_data-frcal))/amp_norm*np.exp(1j*(-alpha+2.*np.pi*delay*f_data))
-    
+
     def circlefit(self,f_data,z_data,fr=None,Ql=None,refine_results=False,calc_errors=True):
         '''
         S11 version of the circlefit
         '''
-    
+
         if fr is None: fr=f_data[np.argmin(np.absolute(z_data))]
         if Ql is None: Ql=1e6
         xc, yc, r0 = self._fit_circle(z_data,refine_results=refine_results)
@@ -118,16 +114,16 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         #print "Ql from phasefit is: " + str(Ql)
         Qi = Ql/(1.-r0)
         Qc = 1./(1./Ql-1./Qi)
-    
+
         results = {"Qi":Qi,"Qc":Qc,"Ql":Ql,"fr":fr,"theta0":theta0}
-    
+
         #calculation of the error
         p = [fr,Qc,Ql]
         #chi_square, errors = rt.get_errors(rt.residuals_notch_ideal,f_data,z_data,p)
         if calc_errors==True:
             chi_square, cov = self._get_cov_fast_directrefl(f_data,z_data,p)
             #chi_square, cov = rt.get_cov(rt.residuals_notch_ideal,f_data,z_data,p)
-    
+
             if cov is not None:
                 errors = np.sqrt(np.diagonal(cov))
                 fr_err,Qc_err,Ql_err = errors
@@ -145,10 +141,10 @@ class reflection_port(circlefit, save_load, plotting, calibration):
             chi_square = 1./float(len(f_data)-len(p)) * (fun2(p)).sum()
             errors = {"chi_square":chi_square}
             results.update(errors)
-    
+
         return results
-        
-    
+
+
     def autofit(self,electric_delay=None):
         '''
         automatic calibration and fitting
@@ -163,8 +159,8 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         '''
         full model for notch type resonances
         '''
-        return a*np.exp(np.complex(0,alpha))*np.exp(-2j*np.pi*f*delay) * ( 2.*Ql/Qc - 1. + 2j*Ql*(fr-f)/fr ) / ( 1. - 2j*Ql*(fr-f)/fr )    
-        
+        return a*np.exp(np.complex(0,alpha))*np.exp(-2j*np.pi*f*delay) * ( 2.*Ql/Qc - 1. + 2j*Ql*(fr-f)/fr ) / ( 1. - 2j*Ql*(fr-f)/fr )
+
     def get_single_photon_limit(self,unit='dBm'):
         '''
         returns the amout of power in units of W necessary
@@ -179,11 +175,11 @@ class reflection_port(circlefit, save_load, plotting, calibration):
                 return Watt2dBm(1./(4.*k_c/(2.*np.pi*hbar*fr*(k_c+k_i)**2)))
             elif unit=='watt':
                 return 1./(4.*k_c/(2.*np.pi*hbar*fr*(k_c+k_i)**2))
-                
+
         else:
             warnings.warn('Please perform the fit first',UserWarning)
             return None
-        
+
     def get_photons_in_resonator(self,power,unit='dBm'):
         '''
         returns the average number of photons
@@ -200,7 +196,7 @@ class reflection_port(circlefit, save_load, plotting, calibration):
         else:
             warnings.warn('Please perform the fit first',UserWarning)
             return None
-    
+
 class notch_port(circlefit, save_load, plotting, calibration):
     '''
     notch type port probed in transmission
@@ -217,7 +213,7 @@ class notch_port(circlefit, save_load, plotting, calibration):
             self.z_data_raw = np.array(z_data_raw)
         else:
             self.z_data_raw=None
-    
+
     def get_delay(self,f_data,z_data,delay=None,ignoreslope=True,guess=True):
         '''
         retrieves the cable delay assuming the ideal resonance has a circular shape
@@ -231,10 +227,6 @@ class notch_port(circlefit, save_load, plotting, calibration):
             A2 = 0.
         else:
             A2 = 0.
-            print "WARNING: The ignoreslope option is ignored! Corrections to the baseline should be done manually prior to fitting."
-            print "see also: resonator_tools.calibration.fit_baseline_amp() etc. for help on fitting the baseline."
-            print "There is also an example ipython notebook for using this function."
-            print "However, make sure to understand the impact of the baseline (parasitic coupled resonances etc.) on your system."
             #z_data = (np.absolute(z_data)-A2*(f_data-fr)) * np.exp(np.angle(z_data)*1j)  #usually not necessary
         if delay is None:
             if guess==True:
@@ -243,8 +235,8 @@ class notch_port(circlefit, save_load, plotting, calibration):
                 delay=0.
             delay = self._fit_delay(f_data,z_data,delay,maxiter=200)
         params = [A1, A2, A3, A4, fr, Ql]
-        return delay, params    
-    
+        return delay, params
+
     def do_calibration(self,f_data,z_data,ignoreslope=True,guessdelay=True):
         '''
         performs an automated calibration and tries to determine the prefactors a, alpha, delay
@@ -263,7 +255,7 @@ class notch_port(circlefit, save_load, plotting, calibration):
         alpha = np.angle(offrespoint)
         a = np.absolute(offrespoint)
         return delay, a, alpha, fr, Ql, params[1], params[4]
-    
+
     def do_normalization(self,f_data,z_data,delay,amp_norm,alpha,A2,frcal):
         '''
         removes the prefactors a, alpha, delay and returns the calibrated data, see also "do_calibration"
@@ -289,7 +281,7 @@ class notch_port(circlefit, save_load, plotting, calibration):
         the program fits the circle with the algebraic technique described in [3], the rest of the fitting is done with the scipy.optimize least square fitting toolbox
         also, check out [5] S. Probst et al. "Efficient and reliable analysis of noisy complex scatterung resonator data for superconducting quantum circuits" (in preparation)
         '''
-    
+
         if fr is None: fr=f_data[np.argmin(np.absolute(z_data))]
         if Ql is None: Ql=1e6
         xc, yc, r0 = self._fit_circle(z_data,refine_results=refine_results)
@@ -303,23 +295,18 @@ class notch_port(circlefit, save_load, plotting, calibration):
         Qc = 1./(1./complQc).real   # here, taking the real part of (1/complQc) from diameter correction method
         Qi_dia_corr = 1./(1./Ql-1./Qc)
         Qi_no_corr = 1./(1./Ql-1./absQc)
-    
+
         results = {"Qi_dia_corr":Qi_dia_corr,"Qi_no_corr":Qi_no_corr,"absQc":absQc,"Qc_dia_corr":Qc,"Ql":Ql,"fr":fr,"theta0":theta0,"phi0":phi0}
-    
+
         #calculation of the error
         p = [fr,absQc,Ql,phi0]
         #chi_square, errors = rt.get_errors(rt.residuals_notch_ideal,f_data,z_data,p)
         if calc_errors==True:
             chi_square, cov = self._get_cov_fast_notch(f_data,z_data,p)
             #chi_square, cov = rt.get_cov(rt.residuals_notch_ideal,f_data,z_data,p)
-    
-<<<<<<< HEAD
-            if cov!=None:
-                errors = np.sqrt(np.diagonal(cov))  
-=======
+
             if cov is not None:
                 errors = np.sqrt(np.diagonal(cov))
->>>>>>> a64d756d92f8d00b9e63ea2dc13142e4dfad6fcd
                 fr_err,absQc_err,Ql_err,phi0_err = errors
                 #calc Qi with error prop (sum the squares of the variances and covariaces)
                 dQl = 1./((1./Ql-1./absQc)**2*Ql**2)
@@ -343,9 +330,9 @@ class notch_port(circlefit, save_load, plotting, calibration):
             chi_square = 1./float(len(f_data)-len(p)) * (fun2(p)).sum()
             errors = {"chi_square":chi_square}
             results.update(errors)
-    
+
         return results
-        
+
     def autofit(self):
         '''
         automatic calibration and fitting
@@ -355,13 +342,13 @@ class notch_port(circlefit, save_load, plotting, calibration):
         self.z_data = self.do_normalization(self.f_data,self.z_data_raw,delay,amp_norm,alpha,A2,frcal)
         self.fitresults = self.circlefit(self.f_data,self.z_data,fr,Ql,refine_results=False,calc_errors=True)
         self.z_data_sim = A2*(self.f_data-frcal)+self._S21_notch(self.f_data,fr=self.fitresults["fr"],Ql=self.fitresults["Ql"],Qc=self.fitresults["absQc"],phi=self.fitresults["phi0"],a=amp_norm,alpha=alpha,delay=delay)
-    
+
     def _S21_notch(self,f,fr=10e9,Ql=900,Qc=1000.,phi=0.,a=1.,alpha=0.,delay=.0):
         '''
         full model for notch type resonances
         '''
-        return a*np.exp(np.complex(0,alpha))*np.exp(-2j*np.pi*f*delay)*(1.-Ql/Qc*np.exp(1j*phi)/(1.+2j*Ql*(f-fr)/fr))    
-    
+        return a*np.exp(np.complex(0,alpha))*np.exp(-2j*np.pi*f*delay)*(1.-Ql/Qc*np.exp(1j*phi)/(1.+2j*Ql*(f-fr)/fr))
+
     def get_single_photon_limit(self,unit='dBm',diacorr=True):
         '''
         returns the amout of power in units of W necessary
@@ -379,11 +366,11 @@ class notch_port(circlefit, save_load, plotting, calibration):
             if unit=='dBm':
                 return Watt2dBm(1./(4.*k_c/(2.*np.pi*hbar*fr*(k_c+k_i)**2)))
             elif unit=='watt':
-                return 1./(4.*k_c/(2.*np.pi*hbar*fr*(k_c+k_i)**2))                
+                return 1./(4.*k_c/(2.*np.pi*hbar*fr*(k_c+k_i)**2))
         else:
             warnings.warn('Please perform the fit first',UserWarning)
             return None
-        
+
     def get_photons_in_resonator(self,power,unit='dBm',diacorr=True):
         '''
         returns the average number of photons
@@ -403,13 +390,13 @@ class notch_port(circlefit, save_load, plotting, calibration):
             return 4.*k_c/(2.*np.pi*hbar*fr*(k_c+k_i)**2) * power
         else:
             warnings.warn('Please perform the fit first',UserWarning)
-            return None   
+            return None
 
 class transmission_port(circlefit,save_load,plotting):
     '''
     a class for handling transmission measurements
     '''
-    
+
     def __init__(self,f_data=None,z_data_raw=None):
         self.porttype = 'transm'
         self.fitresults = {}
@@ -421,17 +408,17 @@ class transmission_port(circlefit,save_load,plotting):
             self.z_data_raw = np.array(z_data_raw)
         else:
             self.z_data=None
-        
+
     def _S21(self,f,fr,Ql,A):
-        return A**2/(1.+4.*Ql**2*((f-fr)/fr)**2) 
-        
+        return A**2/(1.+4.*Ql**2*((f-fr)/fr)**2)
+
     def fit(self):
         self.ampsqr = (np.absolute(self.z_data_raw))**2
         p = [self.f_data[np.argmax(self.ampsqr)],1000.,np.amax(self.ampsqr)]
         popt, pcov = spopt.curve_fit(self._S21, self.f_data, self.ampsqr,p)
         errors = np.sqrt(np.diag(pcov))
-        self.fitresults = {'fr':popt[0],'fr_err':errors[0],'Ql':popt[1],'Ql_err':errors[1],'Ampsqr':popt[2],'Ampsqr_err':errors[2]} 
-    
+        self.fitresults = {'fr':popt[0],'fr_err':errors[0],'Ql':popt[1],'Ql_err':errors[1],'Ampsqr':popt[2],'Ampsqr_err':errors[2]}
+
 class resonator(object):
     '''
     Universal resonator analysis class
@@ -456,7 +443,7 @@ class resonator(object):
                 else:
                     warnings.warn("Undefined input type! Use 'direct' or 'notch'.", SyntaxWarning)
         if len(self.port) == 0: warnings.warn("Resonator has no coupling ports!", UserWarning)
-            
+
     def add_port(self,key,pname):
         if pname=='direct':
             self.port.update({key:reflection_port()})
@@ -465,50 +452,50 @@ class resonator(object):
         else:
             warnings.warn("Undefined input type! Use 'direct' or 'notch'.", SyntaxWarning)
         if len(self.port) == 0: warnings.warn("Resonator has no coupling ports!", UserWarning)
-            
+
     def delete_port(self,key):
         del self.port[key]
         if len(self.port) == 0: warnings.warn("Resonator has no coupling ports!", UserWarning)
-        
+
     def get_Qi(self):
         '''
         based on the number of ports and the corresponding measurements
         it calculates the internal losses
         '''
         pass
-    
+
     def get_single_photon_limit(self,port):
         '''
-        returns the amout of power necessary to maintain one photon 
+        returns the amout of power necessary to maintain one photon
         on average in the cavity
         '''
         pass
-    
+
     def get_photons_in_resonator(self,power,port):
         '''
         returns the average number of photons
         for a given power
         '''
         pass
-        
+
     def add_transm_meas(self,port1, port2):
         '''
         input: port1
         output: port2
-        adds a transmission measurement 
+        adds a transmission measurement
         connecting two direct ports S21
         '''
         key = port1 + " -> " + port2
         self.port.update({key:transm()})
         pass
 
-   
+
 class batch_processing(object):
     '''
     A class for batch processing of resonator data as a function of another variable
     Typical applications are power scans, magnetic field scans etc.
     '''
-    
+
     def __init__(self,porttype):
         '''
         porttype = 'notch', 'direct', 'transm'
@@ -516,7 +503,7 @@ class batch_processing(object):
         '''
         self.porttype = porttype
         self.results = []
-    
+
     def autofit(self,cal_dataslice = 0):
         '''
         fits all data
@@ -524,13 +511,12 @@ class batch_processing(object):
         of the amplitude and phase, default = 0 (first)
         '''
         pass
-    
+
 class coupled_resonators(batch_processing):
     '''
     A class for fitting a resonator coupled to a second one
     '''
-    
+
     def __init__(self,porttype):
         self.porttype = porttype
         self.results = []
-    
