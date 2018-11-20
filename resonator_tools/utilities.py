@@ -23,7 +23,7 @@ class plotting(object):
         imag = self.z_data_raw.imag
         real2 = self.z_data_sim.real
         imag2 = self.z_data_sim.imag
-        fig = plt.figure()
+        fig = plt.figure(figsize=(15,5))
         fig.canvas.set_window_title("Resonator fit")
         plt.subplot(131)
         plt.plot(real,imag,label='rawdata')
@@ -43,9 +43,10 @@ class plotting(object):
         plt.xlabel('f (GHz)')
         plt.ylabel('Phase')
         plt.legend()
-        plt.gcf().set_size_inches(15,5)
+        # plt.gcf().set_size_inches(15,5)
         plt.tight_layout()
         plt.show()
+
 
     def plotcalibrateddata(self):
         real = self.z_data.real
