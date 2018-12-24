@@ -374,6 +374,9 @@ class notch_port(circlefit, save_load, plotting, calibration):
                                             A2, frcal)
         self.fitresults = self.circlefit(self.f_data, self.z_data, fr, Ql, refine_results=False,
                                          calc_errors=calc_errors)
+        self.fitresults["delay"] = delay
+        self.fitresults["a"] = amp_norm
+        self.fitresults["alpha"] = alpha
         self.z_data_sim = A2 * (self.f_data - frcal) + self._S21_notch(self.f_data,
                                                                        fr=self.fitresults["fr"],
                                                                        Ql=self.fitresults["Ql"],
