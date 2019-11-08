@@ -9,7 +9,7 @@ config = {
     'url': 'https://github.com/vdrhtc/resonator_tools',
     'download_url': 'https://github.com/vdrhtc/resonator_tools',
     'author_email': 'seb.probst@gmail.com',
-    'version': '0.1',
+    'version': '0.12',
     'install_requires': ['nose'],
     'packages': ['resonator_tools'],
     'scripts': [],
