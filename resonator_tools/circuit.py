@@ -174,16 +174,17 @@ class reflection_port(circlefit, save_load, plotting, calibration):
                                                                             Qc=self.fitresults[
                                                                                 "Qc"], a=amp_norm,
                                                                             alpha=alpha,
-                                                                            delay=delay)
+                                                                            delay=delay,
+                                                                            phi=self.fitresults['theta0'])
 
 
 
-    def _S11_directrefl(self, f, fr=10e9, Ql=900, Qc=1000., a=1., alpha=0., delay=.0):
+    def _S11_directrefl(self, f, fr=10e9, Ql=900, Qc=1000., a=1., alpha=0., delay=0., phi = 0.):
         '''
         full model for notch type resonances
         '''
         return a * np.exp(np.complex(0, alpha)) * np.exp(-2j * np.pi * f * delay) * (
-                2. * Ql / Qc - 1. + 2j * Ql * (fr - f) / fr) / (1. - 2j * Ql * (fr - f) / fr)
+                2. * Ql / Qc * np.exp(1j*phi) - 1. + 2j * Ql * (fr - f) / fr) / (1. - 2j * Ql * (fr - f) / fr)
 
     def get_single_photon_limit(self, unit='dBm'):
         '''
